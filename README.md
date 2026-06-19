@@ -1,98 +1,47 @@
-<div align="center">
-
-<img src="https://img.shields.io/badge/Node.js-20-339933?style=for-the-badge&logo=nodedotjs&logoColor=white"/>
-<img src="https://img.shields.io/badge/Express.js-4.18-000000?style=for-the-badge&logo=express&logoColor=white"/>
-<img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white"/>
-<img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white"/>
-<img src="https://img.shields.io/badge/Nginx-Alpine-009639?style=for-the-badge&logo=nginx&logoColor=white"/>
-<img src="https://img.shields.io/badge/JWT-Auth-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white"/>
-
 # ⚡ ShopWave — Full-Stack E-Commerce Application
 
-**A production-ready e-commerce platform built from scratch — Node.js · MySQL · Docker**
-
-*Built as part of the [CodeAlpha](https://www.linkedin.com/company/codealpha/) Full-Stack Development Internship*
-
-[Live Demo](#-quick-start) · [API Docs](#-api-reference) · [Screenshots](#-screenshots)
-
-</div>
+> A production-ready e-commerce web app built with **Node.js + Express**, **MySQL**, **Vanilla JS**, and **Docker**. Developed as part of the **CodeAlpha Internship Program**.
 
 ---
 
-## 📌 What is ShopWave?
-
-ShopWave is a **complete, full-stack e-commerce web application** with real user authentication, a live product catalog, a shopping cart, and a transactional checkout system — all containerized with Docker so anyone can run it in one command.
-
-Every layer was built from scratch:
-- **Backend REST API** in Node.js + Express with JWT authentication
-- **Relational database** in MySQL with foreign keys, transactions, and seed data
-- **Vanilla JS frontend** across 6 pages — no React, no framework dependency
-- **Docker + Nginx** for containerized deployment and reverse proxying
-
----
-
-## ✨ Features
-
-| Feature | Details |
-|---|---|
-| 🔐 JWT Authentication | Secure register/login with bcrypt password hashing |
-| 🛍️ Product Catalog | Search, filter by category, sort by price, pagination |
-| 📦 Product Details | Individual product pages with stock status and quantity picker |
-| 🛒 Shopping Cart | Add, update quantity, remove, clear — all user-specific |
-| 💳 Checkout | Multi-step form with shipping + payment, MySQL transaction |
-| 📋 Order History | View past orders, order detail modal, cancel pending orders |
-| 🐳 Docker Ready | One command spins up MySQL + Node.js + Nginx |
-| 📱 Responsive | Works on mobile, tablet, and desktop |
-
----
-
-## 🏗️ Tech Stack
+## 📁 Folder Structure
 
 ```
-Frontend        → HTML5 · CSS3 · Vanilla JavaScript
-Backend         → Node.js 20 · Express.js 4 · JWT · bcryptjs
-Database        → MySQL 8.0
-DevOps          → Docker · Docker Compose · Nginx (reverse proxy)
-Auth            → JSON Web Tokens (JWT) · bcryptjs (password hashing)
-Validation      → express-validator
-```
-
----
-
-## 📁 Project Structure
-
-```
-shopwave/
+ecommerce/
 ├── backend/
 │   ├── config/
-│   │   └── database.js        # MySQL connection pool
+│   │   └── database.js          # MySQL connection pool
 │   ├── middleware/
-│   │   └── auth.js            # JWT verification middleware
+│   │   └── auth.js              # JWT authentication middleware
 │   ├── routes/
-│   │   ├── auth.js            # POST /register  POST /login  GET /me
-│   │   ├── products.js        # GET /products   GET /products/:id
-│   │   ├── cart.js            # GET/POST/PUT/DELETE /cart
-│   │   └── orders.js          # GET/POST /orders  PATCH /orders/:id/cancel
-│   ├── server.js              # Express entry point
+│   │   ├── auth.js              # Register / Login / Profile
+│   │   ├── products.js          # Product listing & details
+│   │   ├── cart.js              # Cart CRUD operations
+│   │   └── orders.js            # Checkout & order history
+│   ├── .env                     # Environment variables
+│   ├── .dockerignore
 │   ├── Dockerfile
-│   └── package.json
+│   ├── package.json
+│   └── server.js                # Express app entry point
 │
 ├── frontend/
-│   ├── css/style.css          # Complete design system (CSS variables)
-│   ├── js/app.js              # API client · auth helpers · cart badge
-│   ├── index.html             # Home — product grid with filters
-│   ├── product.html           # Product detail page
-│   ├── cart.html              # Shopping cart
-│   ├── login.html             # Tabbed login + register
-│   ├── checkout.html          # Checkout + success screen
-│   ├── orders.html            # Order history + detail modal
-│   ├── nginx.conf             # Reverse proxy config
+│   ├── css/
+│   │   └── style.css            # Global design system
+│   ├── js/
+│   │   └── app.js               # API client, auth helpers, utilities
+│   ├── index.html               # Home / product listing page
+│   ├── product.html             # Product detail page
+│   ├── cart.html                # Shopping cart page
+│   ├── login.html               # Login & Register page
+│   ├── checkout.html            # Checkout page
+│   ├── orders.html              # Order history page
+│   ├── nginx.conf               # Nginx reverse proxy config
 │   └── Dockerfile
 │
 ├── mysql/
-│   └── init.sql               # Schema + 12 seeded products
+│   └── init.sql                 # Database schema + seed data
 │
-├── docker-compose.yml
+├── docker-compose.yml           # Orchestrates all 3 services
 └── README.md
 ```
 
@@ -101,214 +50,492 @@ shopwave/
 ## 🗄️ Database Schema
 
 ```sql
-users       (id, name, email, password_hash, created_at)
-products    (id, name, description, price, image, stock, category)
-cart        (id, user_id→users, product_id→products, quantity)
-orders      (id, user_id→users, total_price, status, shipping_address, payment_method)
-order_items (id, order_id→orders, product_id→products, quantity, price)
+users        → id, name, email, password, created_at
+products     → id, name, description, price, image, stock, category, created_at
+cart         → id, user_id, product_id, quantity, created_at
+orders       → id, user_id, total_price, status, shipping_address, payment_method, created_at
+order_items  → id, order_id, product_id, quantity, price, created_at
 ```
-
-> Relationships use **foreign keys with CASCADE** — deleting a user cleans up their cart and orders automatically.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Docker — Recommended)
 
 ### Prerequisites
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
-- Ports **3000**, **5000**, **3306** available
+- Ports **3000**, **5000**, **3306** free on your machine
 
-### Run in 3 steps
-
+### Step 1 — Clone the project
 ```bash
-# 1. Clone the repo
-git clone https://github.com/Prabhas125/shopwave-ecommerce.git
+git clone https://github.com/yourusername/shopwave-ecommerce.git
 cd shopwave-ecommerce
-
-# 2. Start everything
-docker-compose up --build
-
-# 3. Open the app
-# Frontend  →  http://localhost:3000
-# API       →  http://localhost:5000/api
-# Health    →  http://localhost:5000/api/health
 ```
 
-> MySQL is automatically initialized with the schema and 12 sample products on first run.
-
-### Stop the app
-
+### Step 2 — Launch all services
 ```bash
-docker-compose down        # stop containers
-docker-compose down -v     # stop + wipe database (fresh start)
+docker-compose up --build
+```
+
+This single command:
+- Starts **MySQL** and seeds it with 12 sample products
+- Builds and starts the **Node.js backend** on port 5000
+- Builds and starts the **Nginx frontend** on port 3000
+- Sets up an internal Docker network between all services
+
+### Step 3 — Open the app
+| Service   | URL                          |
+|-----------|------------------------------|
+| Frontend  | http://localhost:3000        |
+| Backend API | http://localhost:5000/api  |
+| API Health | http://localhost:5000/api/health |
+
+### Step 4 — Stop the app
+```bash
+docker-compose down          # Stop containers
+docker-compose down -v       # Stop + remove database volume (fresh start)
 ```
 
 ---
 
-## 🔌 API Reference
+## 🛠️ Local Development (Without Docker)
 
-All endpoints are prefixed with `/api`. Protected routes require:
+### Prerequisites
+- Node.js 18+
+- MySQL 8.0 running locally
+
+### Backend Setup
+```bash
+cd backend
+npm install
+
+# Edit .env with your local MySQL credentials
+# DB_HOST=localhost
+# DB_USER=root
+# DB_PASSWORD=yourpassword
+
+npm run dev     # Starts with nodemon (auto-reload)
 ```
-Authorization: Bearer <jwt_token>
+
+### Frontend Setup
+```bash
+# Option 1: VS Code Live Server extension (recommended)
+# Open frontend/index.html with Live Server on port 5500
+
+# Option 2: Python simple server
+cd frontend
+python3 -m http.server 3000
+
+# Option 3: npx
+npx serve frontend -p 3000
 ```
 
-### Auth
+> **Note:** Update `API_BASE` in `frontend/js/app.js` to `http://localhost:5000/api` for local dev.
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/auth/register` | ❌ | Create new account |
-| POST | `/auth/login` | ❌ | Login, receive JWT |
-| GET | `/auth/me` | ✅ | Get current user profile |
-
-**Register body:**
-```json
-{ "name": "Prabhas", "email": "you@example.com", "password": "secret123" }
+### Database Setup
+```bash
+mysql -u root -p < mysql/init.sql
 ```
 
-**Login response:**
-```json
+---
+
+## 🔌 REST API Reference & Postman Testing
+
+Base URL: `http://localhost:5000/api`
+
+---
+
+### 🔐 Auth Endpoints
+
+#### POST `/api/auth/register` — Create new account
+```
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+Body (raw JSON):
 {
-  "success": true,
-  "token": "eyJhbGci...",
-  "user": { "id": 1, "name": "Prabhas", "email": "you@example.com" }
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "password": "secret123"
+}
+
+✅ Success 201:
+{
+    "success": true,
+    "message": "Registration successful.",
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "user": { "id": 1, "name": "Jane Smith", "email": "jane@example.com" }
+}
+
+❌ Error 409 (duplicate email):
+{ "success": false, "message": "Email already registered." }
+```
+
+---
+
+#### POST `/api/auth/login` — Login
+```
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+Body:
+{
+    "email": "jane@example.com",
+    "password": "secret123"
+}
+
+✅ Success 200:
+{
+    "success": true,
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "user": { "id": 1, "name": "Jane Smith", "email": "jane@example.com" }
+}
+```
+
+> 💡 **Postman Tip:** Copy the `token` value. In Postman, go to the request's **Authorization** tab → select **Bearer Token** → paste it. All protected endpoints below require this.
+
+---
+
+#### GET `/api/auth/me` — Get profile 🔒
+```
+GET http://localhost:5000/api/auth/me
+Authorization: Bearer <your_token>
+
+✅ Success 200:
+{
+    "success": true,
+    "user": { "id": 1, "name": "Jane Smith", "email": "jane@example.com", "created_at": "..." }
 }
 ```
 
 ---
 
-### Products
+### 📦 Product Endpoints
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/products` | ❌ | List all (supports ?search, ?category, ?sort, ?page) |
-| GET | `/products/:id` | ❌ | Single product detail |
-| GET | `/products/categories` | ❌ | All categories with counts |
-
-**Query params:**
+#### GET `/api/products` — List all products
 ```
-?search=headphones          search name + description
-?category=Electronics       filter by category
-?sort=price_asc             price_asc · price_desc · name
-?page=1&limit=12            pagination
-```
+GET http://localhost:5000/api/products
 
----
+# With filters (query params):
+GET http://localhost:5000/api/products?category=Electronics&sort=price_asc&page=1&limit=6
+GET http://localhost:5000/api/products?search=headphones
 
-### Cart (🔒 requires JWT)
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/cart` | Get cart with subtotals and total |
-| POST | `/cart` | Add item `{ product_id, quantity }` |
-| PUT | `/cart/:id` | Update quantity `{ quantity }` |
-| DELETE | `/cart/:id` | Remove one item |
-| DELETE | `/cart` | Clear entire cart |
-
----
-
-### Orders (🔒 requires JWT)
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/orders` | Checkout — creates order from cart |
-| GET | `/orders` | All user orders with item count |
-| GET | `/orders/:id` | Order detail with all items |
-| PATCH | `/orders/:id/cancel` | Cancel pending/processing order |
-
-**Checkout body:**
-```json
+✅ Success 200:
 {
-  "shipping_address": {
-    "name": "Prabhas",
-    "address": "123 Main St",
-    "city": "Hyderabad",
-    "zip": "500001",
-    "country": "IN"
-  },
-  "payment_method": "card"
+    "success": true,
+    "data": [
+        {
+            "id": 1,
+            "name": "Wireless Noise-Cancelling Headphones",
+            "description": "Premium over-ear...",
+            "price": "299.99",
+            "image": "https://...",
+            "stock": 50,
+            "category": "Electronics"
+        },
+        ...
+    ],
+    "pagination": { "total": 12, "page": 1, "limit": 12, "pages": 1 }
+}
+
+Query Parameters:
+  ?category=Electronics     Filter by category
+  ?search=headphones        Search name & description
+  ?sort=price_asc           price_asc | price_desc | name | (empty = newest)
+  ?page=1&limit=6           Pagination
+```
+
+---
+
+#### GET `/api/products/:id` — Single product
+```
+GET http://localhost:5000/api/products/1
+
+✅ Success 200:
+{
+    "success": true,
+    "data": { "id": 1, "name": "...", "price": "299.99", ... }
+}
+
+❌ Error 404:
+{ "success": false, "message": "Product not found." }
+```
+
+---
+
+#### GET `/api/products/categories` — All categories
+```
+GET http://localhost:5000/api/products/categories
+
+✅ Success 200:
+{
+    "success": true,
+    "data": [
+        { "category": "Electronics", "count": 6 },
+        { "category": "Accessories", "count": 2 },
+        ...
+    ]
 }
 ```
 
 ---
 
-## 🧠 How Key Features Work
+### 🛒 Cart Endpoints (All require Auth 🔒)
 
-### JWT Authentication Flow
+#### GET `/api/cart` — View cart
 ```
-User submits credentials
-        ↓
-Backend validates email exists + bcrypt.compare(password, hash)
-        ↓
-jwt.sign({ id, email, name }, SECRET, { expiresIn: '7d' })
-        ↓
-Token sent to frontend → stored in localStorage
-        ↓
-Every request: Authorization: Bearer <token>
-        ↓
-auth middleware → jwt.verify(token, SECRET) → req.user = decoded
-```
+GET http://localhost:5000/api/cart
+Authorization: Bearer <token>
 
-### Transactional Checkout
+✅ Success 200:
+{
+    "success": true,
+    "data": {
+        "items": [
+            {
+                "id": 1,
+                "quantity": 2,
+                "product_id": 1,
+                "name": "Wireless Headphones",
+                "price": "299.99",
+                "image": "https://...",
+                "subtotal": "599.98"
+            }
+        ],
+        "total": 599.98,
+        "item_count": 1
+    }
+}
 ```
-POST /api/orders
-        ↓
-BEGIN TRANSACTION
-        ↓
-1. Validate all cart items have stock
-2. Calculate total
-3. INSERT into orders
-4. INSERT into order_items (one row per product)
-5. UPDATE products SET stock = stock - quantity
-6. DELETE FROM cart WHERE user_id = ?
-        ↓
-COMMIT (all succeed) or ROLLBACK (anything fails)
-```
-
-> This prevents stock being deducted without an order being created, or orders being created without stock being reduced.
 
 ---
 
-## 🌐 Environment Variables
+#### POST `/api/cart` — Add item to cart
+```
+POST http://localhost:5000/api/cart
+Authorization: Bearer <token>
+Content-Type: application/json
 
-Edit `backend/.env` or pass via `docker-compose.yml`:
+Body:
+{
+    "product_id": 1,
+    "quantity": 2
+}
+
+✅ Success 201:
+{ "success": true, "message": "Item added to cart." }
+
+❌ Error 400 (out of stock):
+{ "success": false, "message": "Insufficient stock." }
+```
+
+---
+
+#### PUT `/api/cart/:id` — Update quantity
+```
+PUT http://localhost:5000/api/cart/1
+Authorization: Bearer <token>
+Content-Type: application/json
+
+Body:
+{ "quantity": 3 }
+
+✅ Success 200:
+{ "success": true, "message": "Cart updated." }
+```
+
+---
+
+#### DELETE `/api/cart/:id` — Remove one item
+```
+DELETE http://localhost:5000/api/cart/1
+Authorization: Bearer <token>
+
+✅ Success 200:
+{ "success": true, "message": "Item removed from cart." }
+```
+
+---
+
+#### DELETE `/api/cart` — Clear entire cart
+```
+DELETE http://localhost:5000/api/cart
+Authorization: Bearer <token>
+
+✅ Success 200:
+{ "success": true, "message": "Cart cleared." }
+```
+
+---
+
+### 📋 Order Endpoints (All require Auth 🔒)
+
+#### POST `/api/orders` — Place order (Checkout)
+```
+POST http://localhost:5000/api/orders
+Authorization: Bearer <token>
+Content-Type: application/json
+
+Body:
+{
+    "shipping_address": {
+        "name": "Jane Smith",
+        "address": "123 Main Street",
+        "city": "New York",
+        "zip": "10001",
+        "country": "US"
+    },
+    "payment_method": "card"
+}
+
+✅ Success 201:
+{
+    "success": true,
+    "message": "Order placed successfully.",
+    "data": {
+        "order_id": 1,
+        "total": 599.98,
+        "status": "pending",
+        "item_count": 1
+    }
+}
+
+❌ Error 400 (empty cart):
+{ "success": false, "message": "Cart is empty." }
+```
+
+---
+
+#### GET `/api/orders` — Order history
+```
+GET http://localhost:5000/api/orders
+Authorization: Bearer <token>
+
+✅ Success 200:
+{
+    "success": true,
+    "data": [
+        {
+            "id": 1,
+            "total_price": "599.98",
+            "status": "pending",
+            "item_count": 1,
+            "created_at": "2024-01-15T10:30:00.000Z"
+        }
+    ]
+}
+```
+
+---
+
+#### GET `/api/orders/:id` — Order details with items
+```
+GET http://localhost:5000/api/orders/1
+Authorization: Bearer <token>
+
+✅ Success 200:
+{
+    "success": true,
+    "data": {
+        "id": 1,
+        "total_price": "599.98",
+        "status": "pending",
+        "shipping_address": "{\"name\":\"Jane Smith\",...}",
+        "payment_method": "card",
+        "items": [
+            {
+                "id": 1,
+                "product_id": 1,
+                "name": "Wireless Headphones",
+                "image": "https://...",
+                "quantity": 2,
+                "price": "299.99",
+                "subtotal": "599.98"
+            }
+        ]
+    }
+}
+```
+
+---
+
+#### PATCH `/api/orders/:id/cancel` — Cancel order
+```
+PATCH http://localhost:5000/api/orders/1/cancel
+Authorization: Bearer <token>
+
+✅ Success 200:
+{ "success": true, "message": "Order cancelled." }
+
+❌ Error 400 (already shipped):
+{ "success": false, "message": "Order cannot be cancelled at this stage." }
+```
+
+---
+
+## 🧪 Postman Quick-Start Collection
+
+Import this flow into Postman to test end-to-end:
+
+1. **Register** → `POST /api/auth/register` → save token
+2. **Login** → `POST /api/auth/login` → update token
+3. **Browse products** → `GET /api/products`
+4. **View product** → `GET /api/products/1`
+5. **Add to cart** → `POST /api/cart` (product_id: 1, quantity: 2)
+6. **View cart** → `GET /api/cart`
+7. **Update qty** → `PUT /api/cart/1` (quantity: 3)
+8. **Checkout** → `POST /api/orders` with shipping_address
+9. **View orders** → `GET /api/orders`
+10. **Order detail** → `GET /api/orders/1`
+
+> Set a **Collection Variable** `base_url = http://localhost:5000/api` and `token = <from login>` to reuse across requests.
+
+---
+
+## 🔧 Environment Variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `PORT` | `5000` | Backend port |
-| `DB_HOST` | `mysql` | MySQL host (Docker service name) |
-| `DB_USER` | `ecomuser` | MySQL user |
-| `DB_PASSWORD` | `ecompassword` | MySQL password |
-| `DB_NAME` | `ecommerce` | Database name |
-| `JWT_SECRET` | — | ⚠️ Change before deploying to production |
-| `JWT_EXPIRES_IN` | `7d` | Token lifespan |
+| `PORT` | 5000 | Backend server port |
+| `DB_HOST` | mysql | MySQL host (Docker service name) |
+| `DB_PORT` | 3306 | MySQL port |
+| `DB_USER` | ecomuser | MySQL username |
+| `DB_PASSWORD` | ecompassword | MySQL password |
+| `DB_NAME` | ecommerce | Database name |
+| `JWT_SECRET` | — | **Change this in production!** |
+| `JWT_EXPIRES_IN` | 7d | Token expiry duration |
 
 ---
 
-## 🐳 Docker Services
+## 🐳 Docker Services Summary
 
-| Service | Image | Port | Role |
+| Service | Image | Port | Purpose |
 |---|---|---|---|
-| `mysql` | mysql:8.0 | 3306 | Database with auto-init |
+| `mysql` | mysql:8.0 | 3306 | Persistent database with seeded products |
 | `backend` | node:20-alpine | 5000 | REST API server |
-| `frontend` | nginx:alpine | 3000 | Static files + API proxy |
+| `frontend` | nginx:alpine | 3000 | Static file server + API proxy |
 
 ---
 
-## 👨‍💻 Author
+## ✨ Features Implemented
 
-**Prabhas**
-GitHub: [@Prabhas125](https://github.com/Prabhas125)
+- [x] JWT-based User Registration & Login
+- [x] Product listing with search, filter by category, sort, pagination
+- [x] Product detail page with quantity selector
+- [x] Shopping cart (add / update quantity / remove / clear)
+- [x] Transactional checkout with stock validation
+- [x] Order history with status tracking
+- [x] Order cancellation
+- [x] Responsive design (mobile-friendly)
+- [x] Docker + Docker Compose full setup
+- [x] MySQL schema with foreign keys + seed data
+- [x] Nginx reverse proxy for frontend → backend
 
 ---
 
-## 🏆 Acknowledgements
+## 🤝 Acknowledgements
 
-Built as part of the **[CodeAlpha](https://www.linkedin.com/company/codealpha/) Full-Stack Development Internship Program**.
+Built as part of the **[CodeAlpha](https://www.linkedin.com/company/codealpha/)** Full Stack Development Internship Program.
 
 ---
 
-<div align="center">
-
-⭐ If this project helped you, please give it a star!
-
-</div>
+*© 2024 ShopWave — CodeAlpha Internship Project*
