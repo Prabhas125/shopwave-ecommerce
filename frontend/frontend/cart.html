@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart — ShopWave</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="container nav-inner">
+        <a href="/index.html" class="nav-brand"><span class="brand-icon">⚡</span> ShopWave</a>
+        <div class="nav-links">
+            <a href="/index.html" class="nav-link">← Continue Shopping</a>
+            <a href="/cart.html" class="nav-cart" id="nav-cart" style="display:none">
+                <span class="cart-icon">🛒</span> Cart
+                <span id="cart-badge"></span>
+            </a>
+            <div id="nav-auth" style="display:flex; gap:8px;">
+                <a href="/login.html" class="btn btn-ghost btn-sm">Log in</a>
+            </div>
+            <div id="nav-user" style="display:none; align-items:center; gap:10px;">
+                <span class="user-name"></span>
+                <button onclick="logout()" class="btn btn-ghost btn-sm">Log out</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="page-header">
+    <div class="container">
+        <h1>Your Cart</h1>
+        <p>Review your items before checkout</p>
+    </div>
+</div>
+
+<main class="container">
+    <div id="cart-content">
+        <div class="loading"><div class="spinner"></div><span>Loading cart…</span></div>
+    </div>
+</main>
+
+<footer class="footer" style="margin-top:60px;">
+    <div class="container footer-inner">
+        <span class="footer-brand">⚡ ShopWave</span>
+        <span>© 2024 ShopWave</span>
+    </div>
+</footer>
+
+<script src="/js/app.js"></script>
+<script>
+    let cartData = null;
+
+    // Require login
+    if (!Auth.isLoggedIn()) {
+        window.location.href = '/login.html?redirect=/cart.html';
+    }
+
+    async function loadCart() {
+        const { ok, data } = await apiFetch('/cart');
+        const container = document.getElementById('cart-content');
+
+        if (!ok) {
+            container.innerHTML = '<p style="color:var(--error);">Failed to load cart.</p>';
+            return;
+        }
+
+        cartData = data.data;
+
+        if (cartData.items.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state" style="padding:80px 0;">
+                    <div class="empty-icon">🛒</div>
+                    <h3>Your cart is empty</h3>
+                    <p>Add some products to get started!</p>
+                    <a href="/index.html" class="btn btn-primary" style="margin-top:20px;">Shop Now</a>
+                </div>`;
+            return;
+        }
+
+        const shipping = cartData.total >= 50 ? 0 : 5.99;
+        const tax = cartData.total * 0.08;
+        const grandTotal = cartData.total + shipping + tax;
+
+        container.innerHTML = `
+            <div class="cart-layout">
+                <div class="card">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <h2>${cartData.item_count} Item${cartData.item_count !== 1 ? 's' : ''}</h2>
+                        <button onclick="clearCart()" class="btn btn-ghost btn-sm" style="color:var(--error);">Clear All</button>
+                    </div>
+                    <div id="cart-items">
+                        ${cartData.items.map(renderCartItem).join('')}
+                    </div>
+                </div>
+
+                <div class="order-summary">
+                    <div class="card">
+                        <div class="card-header"><h2>Order Summary</h2></div>
+                        <div class="card-body">
+                            <div class="summary-row">
+                                <span>Subtotal (${cartData.item_count} items)</span>
+                                <span>$${cartData.total.toFixed(2)}</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>Shipping</span>
+                                <span>${shipping === 0 ? '<span style="color:var(--success);font-weight:600;">FREE</span>' : '$' + shipping.toFixed(2)}</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>Tax (8%)</span>
+                                <span>$${tax.toFixed(2)}</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>Total</span>
+                                <span>$${grandTotal.toFixed(2)}</span>
+                            </div>
+                            <a href="/checkout.html" class="btn btn-primary btn-full" style="margin-top:20px; text-decoration:none; display:flex;">
+                                Proceed to Checkout →
+                            </a>
+                            <a href="/index.html" class="btn btn-ghost btn-full" style="margin-top:8px; text-decoration:none; display:flex;">
+                                Continue Shopping
+                            </a>
+                            ${shipping > 0 ? `
+                            <p style="font-size:0.8rem; color:var(--ink-muted); text-align:center; margin-top:12px;">
+                                Add $${(50 - cartData.total).toFixed(2)} more for free shipping!
+                            </p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    function renderCartItem(item) {
+        return `
+            <div class="cart-item" id="cart-item-${item.id}">
+                <img class="cart-item-img" 
+                     src="${item.image || 'https://via.placeholder.com/88?text=?'}" 
+                     alt="${item.name}"
+                     onerror="this.src='https://via.placeholder.com/88?text=?'"
+                     onclick="window.location.href='/product.html?id=${item.product_id}'" 
+                     style="cursor:pointer;">
+                <div class="cart-item-info">
+                    <div class="cart-item-name" onclick="window.location.href='/product.html?id=${item.product_id}'" style="cursor:pointer;">${item.name}</div>
+                    <div class="cart-item-price">$${parseFloat(item.price).toFixed(2)} each</div>
+                    <div class="qty-control">
+                        <button class="qty-btn" onclick="updateQty(${item.id}, ${item.quantity - 1})">−</button>
+                        <span class="qty-num">${item.quantity}</span>
+                        <button class="qty-btn" onclick="updateQty(${item.id}, ${item.quantity + 1})">+</button>
+                    </div>
+                    <button class="cart-item-remove" onclick="removeItem(${item.id})">Remove</button>
+                </div>
+                <div style="text-align:right; flex-shrink:0;">
+                    <div style="font-weight:800; font-size:1.05rem;">$${parseFloat(item.subtotal).toFixed(2)}</div>
+                </div>
+            </div>`;
+    }
+
+    async function updateQty(cartId, newQty) {
+        if (newQty < 1) { removeItem(cartId); return; }
+        const { ok, data } = await apiFetch(`/cart/${cartId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ quantity: newQty })
+        });
+        if (ok) loadCart();
+        else showToast(data.message || 'Update failed', 'error');
+    }
+
+    async function removeItem(cartId) {
+        const { ok } = await apiFetch(`/cart/${cartId}`, { method: 'DELETE' });
+        if (ok) { showToast('Item removed'); loadCart(); }
+    }
+
+    async function clearCart() {
+        if (!confirm('Remove all items from your cart?')) return;
+        const { ok } = await apiFetch('/cart', { method: 'DELETE' });
+        if (ok) { showToast('Cart cleared'); loadCart(); }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadCart);
+</script>
+</body>
+</html>

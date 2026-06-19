@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopWave — Modern E-Commerce</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ─── Navbar ─── -->
+<nav class="navbar">
+    <div class="container nav-inner">
+        <a href="/index.html" class="nav-brand">
+            <span class="brand-icon">⚡</span> ShopWave
+        </a>
+        <div class="nav-links">
+            <a href="/index.html" class="nav-link">Home</a>
+            <a href="/orders.html" class="nav-link" id="nav-orders" style="display:none">Orders</a>
+
+            <a href="/cart.html" class="nav-cart" id="nav-cart" style="display:none">
+                <span class="cart-icon">🛒</span>
+                Cart
+                <span id="cart-badge"></span>
+            </a>
+
+            <div id="nav-auth" style="display:flex; gap:8px;">
+                <a href="/login.html" class="btn btn-ghost btn-sm">Log in</a>
+                <a href="/login.html" class="btn btn-primary btn-sm">Sign up</a>
+            </div>
+
+            <div id="nav-user" style="display:none; align-items:center; gap:10px;">
+                <span class="user-name"></span>
+                <button onclick="logout()" class="btn btn-ghost btn-sm">Log out</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- ─── Hero ─── -->
+<section class="hero">
+    <div class="container hero-content">
+        <h1>The Store for<br>Curious Shoppers</h1>
+        <p>Handpicked products, fair prices, and fast shipping. Discover what's worth buying.</p>
+        <div class="hero-actions">
+            <button onclick="document.getElementById('products-section').scrollIntoView({behavior:'smooth'})" class="btn-hero">
+                Shop Now
+            </button>
+            <a href="/login.html" class="btn-hero-outline">Create Account</a>
+        </div>
+    </div>
+</section>
+
+<!-- ─── Products Section ─── -->
+<main class="container page-content" id="products-section">
+
+    <!-- Filters -->
+    <div class="filters-bar" id="filters-bar">
+        <button class="filter-chip active" data-category="">All</button>
+        <!-- Dynamic categories injected here -->
+        <div class="search-bar">
+            <input type="text" id="search-input" class="search-input form-control" placeholder="Search products…">
+            <button onclick="handleSearch()" class="btn btn-primary btn-sm">Search</button>
+        </div>
+    </div>
+
+    <!-- Sort -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+        <h2 id="section-title" style="font-size:1.25rem; font-weight:700;"></h2>
+        <select id="sort-select" class="form-control" style="width:auto; padding:8px 12px; font-size:0.875rem;" onchange="loadProducts()">
+            <option value="">Newest First</option>
+            <option value="price_asc">Price: Low → High</option>
+            <option value="price_desc">Price: High → Low</option>
+            <option value="name">Name A–Z</option>
+        </select>
+    </div>
+
+    <!-- Grid -->
+    <div id="products-grid" class="products-grid">
+        <div class="loading"><div class="spinner"></div><span>Loading products…</span></div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination" style="display:flex; justify-content:center; gap:8px; margin-top:40px;"></div>
+
+</main>
+
+<!-- ─── Footer ─── -->
+<footer class="footer">
+    <div class="container footer-inner">
+        <span class="footer-brand">⚡ ShopWave</span>
+        <span>© 2024 ShopWave. Built with Node.js & Express.</span>
+    </div>
+</footer>
+
+<script src="/js/app.js"></script>
+<script>
+    let currentPage = 1;
+    let currentCategory = '';
+    let currentSearch = '';
+
+    // Load categories for filter chips
+    async function loadCategories() {
+        const { ok, data } = await apiFetch('/products/categories');
+        if (!ok) return;
+        const bar = document.getElementById('filters-bar');
+        const firstChip = bar.querySelector('.filter-chip');
+        data.data.forEach(cat => {
+            const chip = document.createElement('button');
+            chip.className = 'filter-chip';
+            chip.dataset.category = cat.category;
+            chip.textContent = `${cat.category} (${cat.count})`;
+            bar.insertBefore(chip, bar.querySelector('.search-bar'));
+        });
+        bar.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                bar.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                currentCategory = chip.dataset.category;
+                currentPage = 1;
+                loadProducts();
+            });
+        });
+    }
+
+    async function loadProducts() {
+        const grid = document.getElementById('products-grid');
+        grid.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading…</span></div>';
+
+        const sort = document.getElementById('sort-select').value;
+        const params = new URLSearchParams({ page: currentPage, limit: 12 });
+        if (currentCategory) params.set('category', currentCategory);
+        if (currentSearch) params.set('search', currentSearch);
+        if (sort) params.set('sort', sort);
+
+        const { ok, data } = await apiFetch(`/products?${params}`);
+
+        if (!ok || !data.data?.length) {
+            grid.innerHTML = `
+                <div class="empty-state" style="grid-column:1/-1;">
+                    <div class="empty-icon">🔍</div>
+                    <h3>No products found</h3>
+                    <p>Try adjusting your search or filters.</p>
+                </div>`;
+            document.getElementById('section-title').textContent = '0 products';
+            return;
+        }
+
+        const { pagination } = data;
+        document.getElementById('section-title').textContent =
+            `${pagination.total} product${pagination.total !== 1 ? 's' : ''}`;
+
+        grid.innerHTML = data.data.map(buildProductCard).join('');
+        renderPagination(pagination);
+    }
+
+    function renderPagination(p) {
+        const container = document.getElementById('pagination');
+        if (p.pages <= 1) { container.innerHTML = ''; return; }
+        let html = '';
+        for (let i = 1; i <= p.pages; i++) {
+            html += `<button onclick="gotoPage(${i})" class="btn ${i === p.page ? 'btn-primary' : 'btn-ghost'} btn-sm">${i}</button>`;
+        }
+        container.innerHTML = html;
+    }
+
+    function gotoPage(page) {
+        currentPage = page;
+        loadProducts();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function handleSearch() {
+        currentSearch = document.getElementById('search-input').value.trim();
+        currentPage = 1;
+        loadProducts();
+    }
+
+    document.getElementById('search-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleSearch();
+    });
+
+    // Show orders link if logged in
+    function updateOrdersLink() {
+        const link = document.getElementById('nav-orders');
+        if (link && Auth.isLoggedIn()) link.style.display = 'inline-flex';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadCategories();
+        loadProducts();
+        updateOrdersLink();
+    });
+</script>
+</body>
+</html>

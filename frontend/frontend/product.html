@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product — ShopWave</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="container nav-inner">
+        <a href="/index.html" class="nav-brand"><span class="brand-icon">⚡</span> ShopWave</a>
+        <div class="nav-links">
+            <a href="/index.html" class="nav-link">← Back to Shop</a>
+            <a href="/cart.html" class="nav-cart" id="nav-cart" style="display:none">
+                <span class="cart-icon">🛒</span> Cart
+                <span id="cart-badge"></span>
+            </a>
+            <div id="nav-auth" style="display:flex; gap:8px;">
+                <a href="/login.html" class="btn btn-ghost btn-sm">Log in</a>
+                <a href="/login.html" class="btn btn-primary btn-sm">Sign up</a>
+            </div>
+            <div id="nav-user" style="display:none; align-items:center; gap:10px;">
+                <span class="user-name"></span>
+                <button onclick="logout()" class="btn btn-ghost btn-sm">Log out</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main class="container page-content">
+    <div id="product-detail">
+        <div class="loading"><div class="spinner"></div><span>Loading product…</span></div>
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="container footer-inner">
+        <span class="footer-brand">⚡ ShopWave</span>
+        <span>© 2024 ShopWave</span>
+    </div>
+</footer>
+
+<script src="/js/app.js"></script>
+<script>
+async function loadProduct() {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (!id) {
+        window.location.href = '/index.html';
+        return;
+    }
+
+    const { ok, data } = await apiFetch(`/products/${id}`);
+    const container = document.getElementById('product-detail');
+
+    if (!ok) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">😕</div>
+                <h3>Product not found</h3>
+                <p>This product may no longer be available.</p>
+                <a href="/index.html" class="btn btn-primary" style="margin-top:16px;">Back to Shop</a>
+            </div>`;
+        return;
+    }
+
+    const p = data.data;
+    document.title = `${p.name} — ShopWave`;
+
+    container.innerHTML = `
+        <nav style="font-size:0.85rem; color:var(--ink-muted); margin-bottom:28px;">
+            <a href="/index.html" style="color:var(--accent);">Home</a> 
+            › <a href="/index.html" style="color:var(--accent);">${p.category}</a>
+            › ${p.name}
+        </nav>
+
+        <div class="product-detail-layout">
+            <div class="product-detail-img">
+                <img src="${p.image || 'https://via.placeholder.com/600x450?text=No+Image'}" 
+                     alt="${p.name}"
+                     onerror="this.src='https://via.placeholder.com/600x450?text=No+Image'">
+            </div>
+
+            <div class="product-detail-content">
+                <span class="product-badge" style="display:inline-block; margin-bottom:12px; position:static;">${p.category}</span>
+                <h1 class="product-detail-title">${p.name}</h1>
+                <div class="product-detail-price">$${parseFloat(p.price).toFixed(2)}</div>
+
+                <div class="stock-info">
+                    ${p.stock > 0
+                        ? `✓ In Stock (${p.stock} available)`
+                        : `✕ Out of Stock`}
+                </div>
+
+                <p class="product-detail-desc">${p.description || 'No description available.'}</p>
+
+                ${p.stock > 0 ? `
+                <div class="qty-selector">
+                    <label>Quantity</label>
+                    <div class="qty-control">
+                        <button class="qty-btn" onclick="changeQty(-1)">−</button>
+                        <span class="qty-num" id="qty-display">1</span>
+                        <button class="qty-btn" onclick="changeQty(1)">+</button>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                    <button onclick="handleAddToCart(${p.id}, ${p.stock})" class="btn btn-primary btn-lg">
+                        🛒 Add to Cart
+                    </button>
+                    <button onclick="handleBuyNow(${p.id}, ${p.stock})" class="btn btn-outline btn-lg">
+                        Buy Now
+                    </button>
+                </div>` : `
+                <button class="btn btn-ghost btn-lg" disabled>Out of Stock</button>
+                `}
+
+                <div style="margin-top:28px; padding-top:24px; border-top:1px solid var(--border);">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="card" style="text-align:center; padding:16px;">
+                            <div style="font-size:1.4rem; margin-bottom:4px;">🚚</div>
+                            <div style="font-size:0.8rem; font-weight:600;">Free Shipping</div>
+                            <div style="font-size:0.75rem; color:var(--ink-muted);">Orders over $50</div>
+                        </div>
+                        <div class="card" style="text-align:center; padding:16px;">
+                            <div style="font-size:1.4rem; margin-bottom:4px;">🔄</div>
+                            <div style="font-size:0.8rem; font-weight:600;">Easy Returns</div>
+                            <div style="font-size:0.75rem; color:var(--ink-muted);">30-day policy</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+}
+
+let qty = 1;
+function changeQty(delta) {
+    const maxStock = parseInt(document.querySelector('.stock-info').textContent.match(/\d+/)?.[0] || '99');
+    qty = Math.max(1, Math.min(maxStock, qty + delta));
+    document.getElementById('qty-display').textContent = qty;
+}
+
+async function handleAddToCart(productId, stock) {
+    if (!Auth.isLoggedIn()) {
+        showToast('Please login to add items to cart', 'info');
+        setTimeout(() => window.location.href = '/login.html', 1000);
+        return;
+    }
+    await addToCart(productId, qty);
+}
+
+async function handleBuyNow(productId, stock) {
+    if (!Auth.isLoggedIn()) {
+        showToast('Please login first', 'info');
+        setTimeout(() => window.location.href = '/login.html', 1000);
+        return;
+    }
+    const { ok, data } = await apiFetch('/cart', {
+        method: 'POST',
+        body: JSON.stringify({ product_id: productId, quantity: qty })
+    });
+    if (ok) window.location.href = '/checkout.html';
+    else showToast(data.message || 'Failed to proceed', 'error');
+}
+
+document.addEventListener('DOMContentLoaded', loadProduct);
+</script>
+</body>
+</html>

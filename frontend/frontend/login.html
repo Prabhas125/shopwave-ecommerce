@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — ShopWave</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="container nav-inner">
+        <a href="/index.html" class="nav-brand"><span class="brand-icon">⚡</span> ShopWave</a>
+        <div class="nav-links">
+            <a href="/index.html" class="nav-link">← Back to Shop</a>
+        </div>
+    </div>
+</nav>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">⚡</div>
+            <h1>Welcome to ShopWave</h1>
+            <p>Sign in to your account or create a new one</p>
+        </div>
+
+        <div class="auth-body">
+            <!-- Tabs -->
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="switchTab('login')">Log In</div>
+                <div class="auth-tab" onclick="switchTab('register')">Sign Up</div>
+            </div>
+
+            <!-- Login Form -->
+            <div id="tab-login" class="tab-panel active">
+                <div id="login-error" style="background:var(--error-bg); color:var(--error); padding:12px 16px; border-radius:8px; font-size:0.875rem; margin-bottom:16px; display:none;"></div>
+
+                <div class="form-group">
+                    <label class="form-label">Email address</label>
+                    <input type="email" id="login-email" class="form-control" placeholder="you@example.com" autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="Enter your password" autocomplete="current-password">
+                </div>
+                <button onclick="handleLogin()" id="login-btn" class="btn btn-primary btn-full">
+                    Log In
+                </button>
+
+                <p style="text-align:center; margin-top:16px; font-size:0.85rem; color:var(--ink-muted);">
+                    Demo: <strong>demo@shopwave.com</strong> / <strong>demo1234</strong>
+                </p>
+            </div>
+
+            <!-- Register Form -->
+            <div id="tab-register" class="tab-panel">
+                <div id="register-error" style="background:var(--error-bg); color:var(--error); padding:12px 16px; border-radius:8px; font-size:0.875rem; margin-bottom:16px; display:none;"></div>
+
+                <div class="form-group">
+                    <label class="form-label">Full name</label>
+                    <input type="text" id="reg-name" class="form-control" placeholder="Jane Smith" autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email address</label>
+                    <input type="email" id="reg-email" class="form-control" placeholder="you@example.com" autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="reg-password" class="form-control" placeholder="At least 6 characters" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm password</label>
+                    <input type="password" id="reg-confirm" class="form-control" placeholder="Repeat your password" autocomplete="new-password">
+                </div>
+                <button onclick="handleRegister()" id="register-btn" class="btn btn-primary btn-full">
+                    Create Account
+                </button>
+            </div>
+
+            <div style="text-align:center; margin-top:20px; font-size:0.8rem; color:var(--ink-muted);">
+                By continuing, you agree to ShopWave's Terms of Service
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+    // Redirect if already logged in
+    if (Auth.isLoggedIn()) window.location.href = '/index.html';
+
+    // Check URL param for tab
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'register') switchTab('register');
+
+    function switchTab(tab) {
+        document.querySelectorAll('.auth-tab').forEach((t, i) => {
+            t.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+        });
+        document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+        document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+    }
+
+    function setLoading(btn, loading, text) {
+        btn.disabled = loading;
+        btn.textContent = loading ? 'Please wait…' : text;
+    }
+
+    async function handleLogin() {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        const errorEl = document.getElementById('login-error');
+        const btn = document.getElementById('login-btn');
+
+        errorEl.style.display = 'none';
+
+        if (!email || !password) {
+            errorEl.textContent = 'Please enter your email and password.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        setLoading(btn, true, 'Log In');
+        const { ok, data } = await apiFetch('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password })
+        });
+        setLoading(btn, false, 'Log In');
+
+        if (ok) {
+            Auth.setAuth(data.token, data.user);
+            showToast(`Welcome back, ${data.user.name.split(' ')[0]}!`);
+            const redirect = urlParams.get('redirect') || '/index.html';
+            setTimeout(() => window.location.href = redirect, 800);
+        } else {
+            errorEl.textContent = data.message || 'Login failed. Please try again.';
+            errorEl.style.display = 'block';
+        }
+    }
+
+    async function handleRegister() {
+        const name = document.getElementById('reg-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const password = document.getElementById('reg-password').value;
+        const confirm = document.getElementById('reg-confirm').value;
+        const errorEl = document.getElementById('register-error');
+        const btn = document.getElementById('register-btn');
+
+        errorEl.style.display = 'none';
+
+        if (!name || !email || !password || !confirm) {
+            errorEl.textContent = 'All fields are required.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        if (password !== confirm) {
+            errorEl.textContent = 'Passwords do not match.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        if (password.length < 6) {
+            errorEl.textContent = 'Password must be at least 6 characters.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        setLoading(btn, true, 'Create Account');
+        const { ok, data } = await apiFetch('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ name, email, password })
+        });
+        setLoading(btn, false, 'Create Account');
+
+        if (ok) {
+            Auth.setAuth(data.token, data.user);
+            showToast(`Welcome, ${data.user.name.split(' ')[0]}! Account created.`);
+            setTimeout(() => window.location.href = '/index.html', 800);
+        } else {
+            errorEl.textContent = data.message || 'Registration failed.';
+            if (data.errors) {
+                errorEl.textContent = data.errors.map(e => e.msg).join(' ');
+            }
+            errorEl.style.display = 'block';
+        }
+    }
+
+    // Enter key support
+    ['login-email', 'login-password'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+            if (e.key === 'Enter') handleLogin();
+        });
+    });
+
+    ['reg-name', 'reg-email', 'reg-password', 'reg-confirm'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+            if (e.key === 'Enter') handleRegister();
+        });
+    });
+</script>
+</body>
+</html>

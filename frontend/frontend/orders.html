@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders — ShopWave</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="container nav-inner">
+        <a href="/index.html" class="nav-brand"><span class="brand-icon">⚡</span> ShopWave</a>
+        <div class="nav-links">
+            <a href="/index.html" class="nav-link">← Shop</a>
+            <a href="/cart.html" class="nav-cart" id="nav-cart" style="display:none">
+                <span class="cart-icon">🛒</span> Cart
+                <span id="cart-badge"></span>
+            </a>
+            <div id="nav-auth" style="display:flex; gap:8px;">
+                <a href="/login.html" class="btn btn-ghost btn-sm">Log in</a>
+            </div>
+            <div id="nav-user" style="display:none; align-items:center; gap:10px;">
+                <span class="user-name"></span>
+                <button onclick="logout()" class="btn btn-ghost btn-sm">Log out</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="page-header">
+    <div class="container">
+        <h1>My Orders</h1>
+        <p>Track your order history</p>
+    </div>
+</div>
+
+<main class="container" style="max-width:820px; padding-bottom:60px;">
+    <div id="orders-content">
+        <div class="loading"><div class="spinner"></div><span>Loading orders…</span></div>
+    </div>
+</main>
+
+<!-- Order Detail Modal -->
+<div id="order-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:var(--surface); border-radius:var(--radius-lg); max-width:560px; width:100%; max-height:80vh; overflow-y:auto; box-shadow:var(--shadow-lg);">
+        <div style="padding:24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <h3 id="modal-title" style="font-size:1.1rem; font-weight:700;"></h3>
+            <button onclick="closeModal()" style="font-size:1.5rem; color:var(--ink-muted); padding:4px 8px; border-radius:6px; transition:background 0.2s;" onmouseover="this.style.background='var(--surface-alt)'" onmouseout="this.style.background='none'">✕</button>
+        </div>
+        <div id="modal-content" style="padding:24px;"></div>
+    </div>
+</div>
+
+<footer class="footer">
+    <div class="container footer-inner">
+        <span class="footer-brand">⚡ ShopWave</span>
+        <span>© 2024 ShopWave</span>
+    </div>
+</footer>
+
+<script src="/js/app.js"></script>
+<script>
+    if (!Auth.isLoggedIn()) window.location.href = '/login.html';
+
+    async function loadOrders() {
+        const { ok, data } = await apiFetch('/orders');
+        const container = document.getElementById('orders-content');
+
+        if (!ok) {
+            container.innerHTML = '<p style="color:var(--error); text-align:center; padding:40px;">Failed to load orders.</p>';
+            return;
+        }
+
+        if (!data.data.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📦</div>
+                    <h3>No orders yet</h3>
+                    <p>Start shopping to see your orders here!</p>
+                    <a href="/index.html" class="btn btn-primary" style="margin-top:20px;">Shop Now</a>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = data.data.map(order => `
+            <div class="card order-card">
+                <div class="card-body">
+                    <div class="order-header">
+                        <div>
+                            <div class="order-id">Order #${order.id}</div>
+                            <div class="order-date">${new Date(order.created_at).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'})}</div>
+                        </div>
+                        <span class="badge badge-${order.status}">${order.status}</span>
+                    </div>
+
+                    <div style="margin:16px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div style="color:var(--ink-muted); font-size:0.875rem;">
+                            ${order.item_count} item${order.item_count !== 1 ? 's' : ''}
+                        </div>
+                        <div style="font-weight:800; font-size:1.1rem; color:var(--accent);">
+                            $${parseFloat(order.total_price).toFixed(2)}
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="viewOrderDetail(${order.id})" class="btn btn-outline btn-sm">
+                            View Details
+                        </button>
+                        ${['pending', 'processing'].includes(order.status) ? `
+                        <button onclick="cancelOrder(${order.id})" class="btn btn-ghost btn-sm" style="color:var(--error);">
+                            Cancel Order
+                        </button>` : ''}
+                    </div>
+                </div>
+            </div>`).join('');
+    }
+
+    async function viewOrderDetail(orderId) {
+        document.getElementById('modal-title').textContent = `Order #${orderId}`;
+        document.getElementById('modal-content').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        document.getElementById('order-modal').style.display = 'flex';
+
+        const { ok, data } = await apiFetch(`/orders/${orderId}`);
+        if (!ok) {
+            document.getElementById('modal-content').innerHTML = '<p style="color:var(--error);">Failed to load order details.</p>';
+            return;
+        }
+
+        const order = data.data;
+        let address = '';
+        try {
+            const addr = JSON.parse(order.shipping_address);
+            address = `${addr.name}, ${addr.address}, ${addr.city} ${addr.zip}, ${addr.country}`;
+        } catch(e) { address = order.shipping_address || 'N/A'; }
+
+        document.getElementById('modal-content').innerHTML = `
+            <div style="margin-bottom:20px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div style="background:var(--surface-alt); padding:14px; border-radius:var(--radius-sm);">
+                    <div style="font-size:0.75rem; font-weight:600; color:var(--ink-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Status</div>
+                    <span class="badge badge-${order.status}">${order.status}</span>
+                </div>
+                <div style="background:var(--surface-alt); padding:14px; border-radius:var(--radius-sm);">
+                    <div style="font-size:0.75rem; font-weight:600; color:var(--ink-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Payment</div>
+                    <div style="font-weight:600; font-size:0.9rem;">${order.payment_method || 'card'}</div>
+                </div>
+            </div>
+
+            <div style="background:var(--surface-alt); padding:14px; border-radius:var(--radius-sm); margin-bottom:20px;">
+                <div style="font-size:0.75rem; font-weight:600; color:var(--ink-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Shipping To</div>
+                <div style="font-size:0.9rem;">${address}</div>
+            </div>
+
+            <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:12px;">Items Ordered</h4>
+            ${order.items.map(item => `
+                <div style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);">
+                    <img src="${item.image || ''}" alt="${item.name}"
+                         style="width:48px; height:48px; object-fit:cover; border-radius:8px; background:var(--surface-alt);"
+                         onerror="this.style.display='none'">
+                    <div style="flex:1;">
+                        <div style="font-weight:600; font-size:0.9rem;">${item.name}</div>
+                        <div style="font-size:0.8rem; color:var(--ink-muted);">$${parseFloat(item.price).toFixed(2)} × ${item.quantity}</div>
+                    </div>
+                    <div style="font-weight:700;">$${parseFloat(item.subtotal).toFixed(2)}</div>
+                </div>`).join('')}
+
+            <div style="display:flex; justify-content:space-between; padding-top:16px; font-size:1.1rem; font-weight:800;">
+                <span>Total</span>
+                <span style="color:var(--accent);">$${parseFloat(order.total_price).toFixed(2)}</span>
+            </div>`;
+    }
+
+    function closeModal() {
+        document.getElementById('order-modal').style.display = 'none';
+    }
+
+    // Close on backdrop click
+    document.getElementById('order-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
+    async function cancelOrder(orderId) {
+        if (!confirm('Are you sure you want to cancel this order?')) return;
+        const { ok, data } = await apiFetch(`/orders/${orderId}/cancel`, { method: 'PATCH' });
+        if (ok) { showToast('Order cancelled'); loadOrders(); }
+        else showToast(data.message || 'Failed to cancel', 'error');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadOrders);
+</script>
+</body>
+</html>
